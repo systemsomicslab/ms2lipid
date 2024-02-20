@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ms2lipid"
-version = "0.1.1"
+version = "0.0.1"
 authors = [
   { name="NamiSakamoto", email="123930464+NamiSakamoto@users.noreply.github.com" },
 ]
@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "numpy",
     "pandas",
     "tensorflow",
     "keras",
