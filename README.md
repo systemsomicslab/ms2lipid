@@ -4,7 +4,7 @@ ms2lipid is a Python library for predicted lipid class by using ms2 spectrum.
 
 ## Installation
 
-Use the package manager [pip](!link) to install ms2lipid.
+Use the package manager [pip](pip install -i https://test.pypi.org/simple/ ms2lipid) to install ms2lipid.
 
 ```bash
 pip install ms2lipid #This is not yet implemented.
