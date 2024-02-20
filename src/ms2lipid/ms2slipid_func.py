@@ -152,7 +152,7 @@ def __load_models(temp_dir, ionmode = 'negative'): ###
 def __apply_replacement(x,y):
     return y.get(x, x)
 
-def ___create_pred_class(row, percent=1):
+def __create_pred_class(row, percent=1):
     classes = [f"{col}:{round(value * 100, 1)}%" for col, value in sorted(row.items(), key=lambda x: x[1], reverse=True) if value >= percent/100]
     return ','.join(classes)
 
@@ -169,7 +169,7 @@ def __pred_class(df, df_data, modelclass_replacement, model_column, model, perce
     df_class_num = pd.DataFrame({'class': list(modelclass_replacement.keys()), 'num': list(modelclass_replacement.values())})
     df_test_predclass = pd.DataFrame(y_pred_test).rename(columns=df_class_num['class'])
 
-    create_pred_class_partial = partial(___create_pred_class, percent=percent)
+    create_pred_class_partial = partial(__create_pred_class, percent=percent)
 
     df_test_predclass['predict_1class'] = y_pred_test_max_
     df_test_predclass['predict_candidateclass'] = df_test_predclass.drop('predict_1class', axis=1).apply(create_pred_class_partial, axis=1)
