@@ -561,7 +561,7 @@ def svm_random_search(X_train, y_train_replaced0, X_test, y_test_replaced0):
 
     print(svm_accuracy, svm_precision, svm_recall, svm_f1)
 
-    return 
+    return svm_accuracy, svm_precision, svm_recall, svm_f1
 
 #knnのparameter tune
 def knn_random_search(X_train, y_train_replaced0, X_test, y_test_replaced0):
@@ -610,4 +610,30 @@ def nn_score_summary(model, X_test, y_test_onehot):
 
     return nn_accuracy, nn_precision, nn_recall, nn_f1
 
+def models_perf_plot(SVM, KNN, RF, NN, save_path, title = 'Evaluation of learning methods'):
+    fig, ax = plt.subplots(figsize=(6, 5))
 
+    x_labels = ['Accuracy', 'Precision', 'Recall', 'F1 score']
+
+    # 棒グラフを描画
+    bar_width = 0.15  # 棒の幅
+    index = np.arange(len(x_labels))  # X軸の位置
+
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red'] #, 'tab:purple']
+
+    plt.bar(index - 1.5 * bar_width, SVM, bar_width, label='SVM', align='center', color=colors[0], alpha=0.5)
+    plt.bar(index - bar_width/2, KNN, bar_width, label='KNN', align='center', color=colors[1], alpha=0.5)
+    plt.bar(index + bar_width/2, RF, bar_width, label='Random Forest', align='center', color=colors[2], alpha=0.5)
+    plt.bar(index + 1.5 * bar_width, NN, bar_width, label='Neural Network', align='center', color=colors[3], alpha=0.9)
+    # X軸のラベルとタイトルを設定
+    plt.xlabel(' ', fontsize=12)
+    plt.ylabel('Score', fontsize=12)
+    plt.xticks(index, x_labels, fontsize=12)
+    plt.title(title, fontsize=13)
+
+    # 凡例を表示
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+    plt.ylim([0, 1])
+
+    plt.savefig(save_path, format='svg', dpi=300, bbox_inches='tight')
+    plt.show()
