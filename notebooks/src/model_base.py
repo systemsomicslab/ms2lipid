@@ -472,13 +472,14 @@ def plot_bar_plot(pred1st_num, candidate_num, all_num, save_path):
     plt.show()
 
 #canopusとの比較用データ
-def conv_subclass(test_df_predclass, y_test, ont_df_path, save_path, subclasslist):
+def conv_subclass(test_df_predclass, y_test, ont_df_path, save_df_path, save_path, subclasslist):
     df_allexp = pd.concat([test_df_predclass, y_test], axis=1)
     df_allexp['TF'] = df_allexp.apply(_check_ontology_in_pred_class, axis=1)
     select_ont = pd.read_csv(ont_df_path)
 
     df_allexp2 = pd.merge(df_allexp.reset_index(), select_ont, on='Ontology', how='inner').rename(columns={'subclass':'cor_subclass'})
     df_allexp2 = pd.merge(df_allexp2, select_ont, left_on = 'pred_1class', right_on = 'Ontology', how='inner').rename(columns={'subclass':'pred_subclass','Ontology_y':'pred_ont'})
+    df_allexp2.to_csv(save_df_path, index=False)
 
     df_subclass_pred = pd.DataFrame(columns=['Subclass', 'Correct_Predictions', 'Incorrect_Predictions', 'Total'])
 
