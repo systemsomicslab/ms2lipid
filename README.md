@@ -7,8 +7,7 @@ ms2lipid is a Python library for predicted lipid class by using ms2 spectrum.
 Use the package manager pip to install ms2lipid.
 
 ```bash
-pip install -i https://test.pypi.org/simple/ ms2lipid
-pip install ms2lipid #This is not yet implemented.
+pip install ms2lipid
 ```
 
 ## Usage
@@ -17,13 +16,10 @@ pip install ms2lipid #This is not yet implemented.
 import ms2lipid
 
 # predicted lipid subclass by ms2 spectrum
-predicted_result_df = ms2lipid.from_data_pred_classs(ms2spectrum(series), precursorion(series), ionmode)
+predicted_result_df = ms2lipid.predclass(data_path, ms2spectrum_column_name, precurcerion_column_name, ionmode)
 
 # Create a summary based on the information of correct class
-ms2lipid.prediction_summary(predicted_result_df, correctclass(series))
-
-# save predicted file as csv
-ms2lipid.save_pred_result(predicted_result_df, 'export_result_df.csv')
+ms2lipid.prediction_summary(predicted_result_df, data_path, class_correct_column_name)
 ```
 
 ## License

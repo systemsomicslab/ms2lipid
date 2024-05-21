@@ -1,51 +1,61 @@
 import pandas as pd
-from src.ms2lipid.ms2slipid_func import from_data_pred_classs, save_pred_result, prediction_summary
+import pytest
+from ms2lipid.ms2slipid_func import *
+
+path_test_csv_neg = 'tests/test_data_csv_neg.csv'
+path_test_csv_pos = 'tests/test_data_csv_pos.csv'
+path_test_msdial_txt_neg = 'tests/test_data_msdial_txt_neg.txt'
+path_test_msp_pos = 'tests/test_data_msp_pos.msp'
+path_test_txt_neg = 'tests/test_data_txt_neg.txt'
 
 
-df_test = pd.read_csv('tests/testdata.csv' )
-ms2 = df_test['MSMSspectrum']
-prec = df_test['AverageMz']
-ont = df_test['Ontology']
+#pred class
+def test_predclass_calla():
+    assert callable(predclass)
 
-
-#from_data_pred_classs
-def test_from_data_pred_classs_type():
-    assert callable(from_data_pred_classs)
-
-def test_from_data_pred_classs_value():
-    result = from_data_pred_classs(ms2, prec, ionmode='test')
+def test_predclass_isins():
+    result = predclass(path_test_csv_neg, ionmode='negative', ms2spc_name = 'MSMSspectrum', prec_name = 'AverageMz')
     assert isinstance(result, pd.DataFrame)
 
-
-#save_pred_result
-def test_save_pred_result_type():
-    assert callable(save_pred_result)
-
-def test_save_pred_result_value():
-    result = from_data_pred_classs(ms2, prec, ionmode='test')
-    
-    save_pred_result(result, path='pred_result.csv')
-    loaded_result = pd.read_csv('pred_result.csv')
-    assert result.equals(loaded_result)
-
-
 #prediction_summary
-def test_prediction_summary_type():
+def test_prediction_summary_calla():
     assert callable(prediction_summary)
 
-def test_prediction_summary_value():
-    result = from_data_pred_classs(ms2, prec, ionmode='test')
-    prediction_summary(result, ont)
- 
-def test_prediction_summary_type2():
-    result = from_data_pred_classs(ms2, prec, ionmode='test')
-    result2 = prediction_summary(result, ont, 'x')
+def test_prediction_summary_isins():
+    result = predclass(path_test_csv_neg, ionmode='negative', ms2spc_name = 'MSMSspectrum', prec_name = 'AverageMz')
+    result2 = prediction_summary(result, path_test_csv_neg, class_name = 'Ontology', df = 'save')
     assert isinstance(result2, pd.DataFrame)
 
-def test_prediction_summary_value2():
-    result = from_data_pred_classs(ms2, prec, ionmode='test')
-    result2 = prediction_summary(result, ont, 'x')
-
-    save_pred_result(result2, path='pred_result2.csv')
-    loaded_result2 = pd.read_csv('pred_result2.csv')
+def test_prediction_summary_save_equals():
+    result = predclass(path_test_csv_neg, ionmode='negative', ms2spc_name = 'MSMSspectrum', prec_name = 'AverageMz')
+    result2 = prediction_summary(result, path_test_csv_neg, class_name = 'Ontology', df = 'save', exppath = 'test.csv')
+    loaded_result2 = pd.read_csv('test.csv')
     assert result2.equals(loaded_result2)
+
+#demo data
+def test_csvdata():
+    result = predclass(path_test_csv_pos, ionmode='positive', ms2spc_name = 'MSMSspectrum', prec_name = 'AverageMz')
+    prediction_summary(result, path_test_csv_pos, class_name = 'Ontology', df = 'save', exppath = 'test.csv')
+    df = pd.read_csv('test.csv')
+    assert (df['predict_1class'] == df['correct_class']).all(), "Mismatch found in 'predict_1class' and 'correct_class' columns"
+
+def test_mspdata():
+    result = predclass(path_test_msp_pos, ionmode='positive', ms2spc_name = 'MSMSspectrum', prec_name = 'AverageMz')
+    prediction_summary(result, path_test_msp_pos, class_name = 'Ontology', df = 'save', exppath = 'test.csv')
+    df = pd.read_csv('test.csv')
+    assert (df['predict_1class'] == df['correct_class']).all(), "Mismatch found in 'predict_1class' and 'correct_class' columns"
+
+def test_txtdata():
+    result = predclass(path_test_txt_neg, ionmode='negative', ms2spc_name = 'MS/MS spectrum', prec_name = 'Average Mz')
+    prediction_summary(result, path_test_txt_neg, class_name = 'Ontology', df = 'save', exppath = 'test.csv')
+    df = pd.read_csv('test.csv')
+    assert (df['predict_1class'] == df['correct_class']).all(), "Mismatch found in 'predict_1class' and 'correct_class' columns"
+
+def test_msdialdata():
+    result = predclass(path_test_msdial_txt_neg, ionmode='negative', format ='MSDIAL', ms2spc_name = 'MS/MS spectrum', prec_name = 'Average Mz')
+    prediction_summary(result, path_test_msdial_txt_neg, class_name = 'Ontology',format ='MSDIAL',  df = 'save', exppath = 'test.csv')
+    df = pd.read_csv('test.csv')
+    assert (df['predict_1class'] == df['correct_class']).all(), "Mismatch found in 'predict_1class' and 'correct_class' columns"
+
+if __name__ == "__main__":
+    pytest.main([__file__])
