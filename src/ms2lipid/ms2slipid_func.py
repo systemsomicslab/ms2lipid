@@ -6,10 +6,7 @@ from keras.models import load_model
 import pickle
 import subprocess
 from functools import partial
-import os
 import tempfile
-from pandas import Series
-import os
 
 def __make_temp_dir():
     try:
@@ -64,7 +61,7 @@ def __wide_neulloss(df):
         data = row['ms2spectrum']
         split_data = data.split(" ")
         data_list = [i.split(":") for i in split_data]
-        precursor = row['precursorion']      
+        precursor = row['precursormz']      
         xy_data = {}
         for item in data_list:           
             if len(item) != 2:
@@ -87,62 +84,88 @@ def __spectrum_neutralloss_table(df):
     df_wide_spct = __wide_spectrum(df)
     df_wide_neuloss = __wide_neulloss(df)
 
-    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['precursorion', 'mod2_value', 'mch_value']]], axis=1).drop(columns=['precursorion'])
+    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['precursormz', 'EOvalue', 'MCHvalue']]], axis=1).drop(columns=['precursormz'])
     
     return df_data  
 
-def __make_table(ms2spectrum, precursorion):
-    df = pd.DataFrame({'ms2spectrum': ms2spectrum, 'precursorion': precursorion})
-    df['mod2_value'] = df['precursorion'].round().astype(int) % 2
-    df['mch_value'] = __cal_mod(df['precursorion'])
+def __msp2df(file_path):
+
+    msp_data = pd.read_csv(file_path, header=None).rename(columns={0:'x'})
+    msp_data['name'] = msp_data['x'].apply(lambda x: x.split(':')[0] if ': ' in x else 'MSMSspectrum')
+    msp_data['value'] = msp_data['x'].apply(lambda x: x.split(':', 1)[1] if ':' in x else x).replace('\t', ':', regex=True).\
+        apply(lambda x: x.split('|')[0] if '|' in x else x)
+    msp_data['id'] = (msp_data['name'] == 'NAME').cumsum() - 1
+
+    msp_data_ = msp_data.pivot_table(index='id', columns='name', values='value', aggfunc=' '.join).reset_index()
+    msp_data_.columns = msp_data_.columns.str.lower()
+    makedf = msp_data_[['id','name','ontology','precursormz','msmsspectrum']].\
+        rename(columns={'name':'Metabolitename','ontology':'Ontology','precursormz':'AverageMz', 'msmsspectrum':'MSMSspectrum'})
+    
+    return makedf
+
+def __import_data(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'):
+
+    data_type = path.split('.')[-1]
+
+    if data_type == 'csv':
+        df = pd.read_csv(path)
+        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+
+    elif data_type == 'msp':
+        df = __msp2df(path)
+        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+        df['precursormz'] = df['precursormz'].str.replace(' ', '').astype(float)
+        
+    elif data_type == 'txt' and format == None:
+        df = pd.read_csv(path, sep='\t', delimiter=None)
+        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+
+    elif data_type == 'txt' and format =='MSDIAL':
+        df = pd.read_csv(path, sep='\t', header=4, delimiter=None)
+        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+
+    else:
+        print('Data type not supported')
+
+    return df
+
+def __make_table(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'): #(ms2spectrum, precursormz)
+    df = __import_data(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
+    #pd.DataFrame({'ms2spectrum': ms2spectrum, 'precursormz': precursormz})
+    df.loc[:, 'EOvalue'] = df['precursormz'].round().astype(int) % 2
+    df.loc[:, 'MCHvalue'] = __cal_mod(df['precursormz'])
     df_data = __spectrum_neutralloss_table(df)  
 
     return df, df_data
 
-def __import_zenodo_data(mode = 'x'):
-    if mode == 'test':
-        filename = "10.5281/zenodo.10674847"
-        subprocess.run(["python", "-m", "zenodo_get", filename])
+def __import_zenodo_data():
+    filename = "10.5281/zenodo.11218838"
+    subprocess.run(["python", "-m", "zenodo_get", filename])
 
-    else:
-        filename = "10.5281/zenodo.10674847" ###
-        subprocess.run(["python", "-m", "zenodo_get", filename]) ###
+def __unzip_file(temp_dir):
+    zip_file = 'model_data.zip' 
 
-def __unzip_file(temp_dir, mode = 'x'):
-    if mode == 'test':
-        zip_file = 'testdata.zip' 
-    else:
-        zip_file = 'testdata.zip' ###
-
-    extract_to = os.path.join(temp_dir) ###
-    os.makedirs(extract_to, exist_ok=True)
-
+    extract_to = temp_dir ###
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         zip_ref.extractall(extract_to)
 
-def __import_and_unzip_zenodo_data(temp_dir, mode='x'):
-    __import_zenodo_data(mode = mode)
-    __unzip_file(temp_dir, mode = mode)
+def __import_and_unzip_zenodo_data(temp_dir):
+    __import_zenodo_data()
+    __unzip_file(temp_dir)
 
 def __load_models(temp_dir, ionmode = 'negative'): ###
     #select ion mode: negative or positive
     if ionmode == 'negative':
-        model = load_model(f'{temp_dir}/testdata/model')
-        model_column = pickle.load(open(f'{temp_dir}/testdata/column.pkl', 'rb'))
-        modelclass_replacement = pickle.load(open(f'{temp_dir}/testdata/dict.pkl', 'rb'))
+        model = load_model(f'{temp_dir}/model_data/negative/model')
+        model_column = pickle.load(open(f'{temp_dir}/model_data/negative/column.pkl', 'rb'))
+        modelclass_replacement = pickle.load(open(f'{temp_dir}/model_data/negative/dict.pkl', 'rb'))
         print('ion mode: negative')
 
     elif ionmode == 'positive':   
-        model = load_model(f'{temp_dir}/testdata/model')
-        model_column = pickle.load(open(f'{temp_dir}/testdata/column.pkl', 'rb'))
-        modelclass_replacement = pickle.load(open(f'{temp_dir}/testdata/dict.pkl', 'rb'))
+        model = load_model(f'{temp_dir}/model_data/positive/model')
+        model_column = pickle.load(open(f'{temp_dir}/model_data/positive/column.pkl', 'rb'))
+        modelclass_replacement = pickle.load(open(f'{temp_dir}/model_data/positive/dict.pkl', 'rb'))
         print('ion mode: positive')
-
-    elif ionmode == 'test':
-        model = load_model(f'{temp_dir}/testdata/model')
-        model_column = pickle.load(open(f'{temp_dir}/testdata/column.pkl', 'rb'))
-        modelclass_replacement = pickle.load(open(f'{temp_dir}/testdata/dict.pkl', 'rb'))
-        print('ion mode: test')
 
     else:
         print('Please select ion mode: negative or positive')
@@ -152,14 +175,14 @@ def __load_models(temp_dir, ionmode = 'negative'): ###
 def __apply_replacement(x,y):
     return y.get(x, x)
 
-def __create_pred_class(row, percent=1):
+def ___create_pred_class(row, percent=1):
     classes = [f"{col}:{round(value * 100, 1)}%" for col, value in sorted(row.items(), key=lambda x: x[1], reverse=True) if value >= percent/100]
     return ','.join(classes)
 
 def __pred_class(df, df_data, modelclass_replacement, model_column, model, percent=1):
     
     df_data.columns = df_data.columns.astype(str)
-    X1_test = df_data[model_column].values
+    X1_test = df_data[model_column[0]].values
     y_pred_test = model.predict(X1_test)
     y_pred_test_max = np.argmax(y_pred_test, axis=1)
     
@@ -169,33 +192,51 @@ def __pred_class(df, df_data, modelclass_replacement, model_column, model, perce
     df_class_num = pd.DataFrame({'class': list(modelclass_replacement.keys()), 'num': list(modelclass_replacement.values())})
     df_test_predclass = pd.DataFrame(y_pred_test).rename(columns=df_class_num['class'])
 
-    create_pred_class_partial = partial(__create_pred_class, percent=percent)
+    create_pred_class_partial = partial(___create_pred_class, percent=percent)
 
     df_test_predclass['predict_1class'] = y_pred_test_max_
     df_test_predclass['predict_candidateclass'] = df_test_predclass.drop('predict_1class', axis=1).apply(create_pred_class_partial, axis=1)
 
-    df_pred_result = df[['ms2spectrum', 'precursorion']].reset_index(drop=True).\
+    df_pred_result = df[['ms2spectrum', 'precursormz']].reset_index(drop=True).\
         merge(df_test_predclass[['predict_1class', 'predict_candidateclass']], left_index=True, right_index=True)
 
     return df_pred_result
 
-def from_data_pred_classs(
-        ms2spectrum :Series, 
-        precursorion :Series, 
-        ionmode = 'negative', 
-        percent=1):
-    
-    """
-    This function is to predict lipid class from LC-MS MS2spectrum.
-    ms2spectrum and precursorion must be the same length and from same order.
+def __save_pred_result(df_test_predclass, exppath = 'pred_result.csv'):
+    df_test_predclass.to_csv(exppath, index=False)
 
-    Parameters:
-        ms2spectrum (Series): MS/MS spectrum represented as a Pandas Series.
-        precursorion: Precursor ion represented as a Pandas Series.
-        ionmode (str): Ion mode, either 'negative' / 'positive' / 'test'. Default is 'negative'.
-        percent (int): Percentage of limiting value. Default is 1%.
+def predclass(
+    path,
+    format = None, 
+    ms2spc_name = 'ms2spectrum', 
+    prec_name = 'precursormz',
+    ionmode = 'negative', 
+    percent=1, 
+    exppath = None,
+):
     
-    This version is supporting total 97 lipid sub classes.
+    """\
+    This function is to predict lipid class from LC-MS MS2spectrum.
+    ms2spectrum and precursormz must be the same length and from same order.
+
+    Parameters
+    ----------
+    path
+        path which contains MS/MS spectrum and precursor ion data.
+    format
+        if you use 'MSDIAL' format, set 'MSDIAL'. Default is None.
+    ms2spc_name
+        column name of MS/MS spectrum.
+    precursormz
+        column name of precursor ion.
+    ionmode
+        Ion mode, either 'negative' / 'positive'. Default is 'negative'.
+    percent
+        Percentage of limiting value. Default is 1%.
+    expath
+        Path to save the predicted result. Default is None. 
+        
+    *This version is supporting total 97 lipid sub classes.
     """
 
     if 'temp_dir' in locals():
@@ -205,30 +246,46 @@ def from_data_pred_classs(
         __import_and_unzip_zenodo_data(temp_dir)
 
     model, model_column, modelclass_replacement = __load_models(temp_dir, ionmode=ionmode) 
-    df, df_data = __make_table(ms2spectrum, precursorion)
+    df, df_data = __make_table(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
     df_test_predclass = __pred_class(df, df_data, modelclass_replacement, model_column, model, percent=percent)
-    return df_test_predclass
 
-def save_pred_result(
-        df_test_predclass :pd.DataFrame, 
-        path = 'pred_result.csv'
-        ):
-    
-    """
-    This function saves the predicted result as a csv file.
-    
-    Parameters:
-        df_test_predclass (pd.DataFrame): Predicted result represented as a Pandas DataFrame.
-            This is also the output of the from_data_pred_classs function.
-        path (str): Path to save the file. Default is 'pred_result.csv'.
-    """
+    if exppath == None:
+        return df_test_predclass
+    else:
+        __save_pred_result(df_test_predclass, exppath = exppath)
 
-    df_test_predclass.to_csv(path, index=False)
 
 #答えがあるときの正答率の評価
-def __candidate_search(df_test_predclass, ont):
-    df_test_predclass[['correct_class']] = pd.DataFrame(ont).reset_index(drop=True)
+def __correctclass_data(path, format = None, class_name = 'ontology'):
 
+    data_type = path.split('.')[-1]
+    
+    if data_type == 'csv':
+        cdf = pd.read_csv(path)
+        cdf = cdf[[class_name]].rename(columns={class_name:'ontology'})
+
+    elif data_type == 'msp':
+        cdf = __msp2df(path)
+        cdf = cdf[[class_name]].rename(columns={class_name:'ontology'})
+        
+    elif data_type == 'txt' and format == None:
+        cdf = pd.read_csv(path, sep='\t', delimiter=None)
+        cdf = cdf[[class_name]].rename(columns={class_name:'ontology'})
+
+    elif data_type == 'txt' and format =='MSDIAL':
+        cdf = pd.read_csv(path, sep='\t', header=4, delimiter=None)
+        cdf = cdf[[class_name]].rename(columns={class_name:'ontology'})
+
+    else:
+        print('Data type not supported')
+
+    return cdf
+
+
+def __candidate_search(df_test_predclass, path, format = None, class_name = 'ontology'):
+    df_test_predclass[['correct_class']] = __correctclass_data(path, format = format, class_name = class_name)[['ontology']]
+    df_test_predclass['correct_class'] = df_test_predclass['correct_class'].str.replace(' ', '')
+    
     #make candidate class list
     all_candidate_list = []
     for all_canf in df_test_predclass.predict_candidateclass:
@@ -252,31 +309,41 @@ def __candidate_search(df_test_predclass, ont):
 
     return list_candidate,df_test_predclass
 
+
 def prediction_summary(
-        df_test_predclass :pd.DataFrame, 
-        ont :Series,
-        df = None
-        ):
+    df_test_predclass :pd.DataFrame, 
+    path, format = None, class_name = 'ontology',
+    df = None,
+    exppath = None,
+):
     
+    """\
+    This function evaluates the predicted result and can also return the result as a Pandas dataframe.
+    If you have the correct answer, you can evaluate the accuracy of the prediction using this function.
+
+    By default, the result is printed. However, if you want to return the result as a dataframe, 
+    you can set the df parameter to something other than None.
+
+    Parameters
+    ----------
+    df_test_predclass
+        Predicted result represented as a Pandas DataFrame.
+        This is also the output of the from_data_pred_class function.
+    path
+        Path to the correct answer data which contains the correct class.
+    format
+        if you use 'MSDIAL' format, set 'MSDIAL'. Default is None.
+    class_name
+        Correct class column name. Default is 'ontology'.
+    df
+        Dataframe to return. Default is None. 
+    exppath
+        Path to save the dataframe. Default is None.
     """
-    This function evaluates the predicted result and also canreturns result oandas dataframe.
-    If you have the correct answer, you can evaluate the accuracy of the prediction by using this.
-    
-    The default is to print the result, but if you want to return the result as a dataframe, 
-    you can fill the df parameter is something other than None.
 
-    Parameters:
-        df_test_predclass (pd.DataFrame): Predicted result represented as a Pandas DataFrame.
-            This is also the output of the from_data_pred_classs function.
-        ont (Series): Correct class represented as a Pandas Series.
-        df (pd.DataFrame): Dataframe to return. Default is None. 
-            If you want to return the result as a dataframe, 
-            you can fill the df parameter is something other than None. (like, df = 'save')
-    """
+    list_candidate, df_test_predclass_eval = __candidate_search(df_test_predclass, path, format = format, class_name = class_name)
 
-    list_candidate, df_test_predclass = __candidate_search(df_test_predclass, ont)
-
-    pred_1class_eval = len(df_test_predclass[df_test_predclass['predict_candidateclass'] == df_test_predclass['correct_class']])
+    pred_1class_eval = len(df_test_predclass_eval[df_test_predclass_eval['predict_1class'] == df_test_predclass_eval['correct_class']])
     pred_cand_eval = list_candidate.count('o')
     mispred = list_candidate.count('x')
 
@@ -284,14 +351,20 @@ def prediction_summary(
     print(f'pred_cand_eval: {pred_cand_eval}')
     print(f'mispred: {mispred}')
 
-    print(f'pred 1class correct ratio: {pred_1class_eval/len(df_test_predclass)}')
-    print(f'pred candidate correct ratio: {pred_cand_eval/len(df_test_predclass)}')
-    print(f'mispred ratio: {mispred/len(df_test_predclass)}')
+    print(f'pred 1class correct ratio: {pred_1class_eval/len(df_test_predclass_eval)}')
+    print(f'pred candidate correct ratio: {pred_cand_eval/len(df_test_predclass_eval)}')
+    print(f'mispred ratio: {mispred/len(df_test_predclass_eval)}')
 
-    if df == None:
-        return
+    if df == None: 
+        return #show summary
+    
     else:
-        return df_test_predclass
+        if exppath == None: #show df 
+            return df_test_predclass_eval
+        else:  #save df
+            df_test_predclass_eval.to_csv(exppath, index=False)
+            return df_test_predclass_eval
+        
+__all__ = ['predclass', 'prediction_summary']
 
 
-__all__ = ['from_data_pred_classs', 'save_pred_result', 'prediction_summary']
