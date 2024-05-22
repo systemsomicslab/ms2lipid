@@ -15,6 +15,8 @@ The page URL of package: https://pypi.org/project/ms2lipid/0.1.4/
 
 Show details： https://systemsomicslab.github.io/ms2lipid/
 
+data_path can be used a path end with csv file, msp file, or text file.
+
 ```python
 import ms2lipid
 
