@@ -11,8 +11,8 @@ pip install ms2lipid
 ```
 
 ## Usage
-THe page URLs:
-https://pypi.org/project/ms2lipid/0.1.3/
+The page URLs of package: https://pypi.org/project/ms2lipid/0.1.4/
+Show details： https://systemsomicslab.github.io/ms2lipid/
 
 ```python
 import ms2lipid
