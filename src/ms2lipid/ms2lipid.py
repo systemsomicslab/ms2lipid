@@ -175,11 +175,11 @@ def __load_models(temp_dir, ionmode = 'negative'): ###
 def __apply_replacement(x,y):
     return y.get(x, x)
 
-def ___create_pred_class(row, percent=1):
-    classes = [f"{col}:{round(value * 100, 1)}%" for col, value in sorted(row.items(), key=lambda x: x[1], reverse=True) if value >= percent/100]
+def ___create_pred_class(row, threshold=1):
+    classes = [f"{col}:{round(value * 100, 1)}%" for col, value in sorted(row.items(), key=lambda x: x[1], reverse=True) if value >= threshold/100]
     return ','.join(classes)
 
-def __pred_class(df, df_data, modelclass_replacement, model_column, model, percent=1):
+def __pred_class(df, df_data, modelclass_replacement, model_column, model, threshold=1):
     
     df_data.columns = df_data.columns.astype(str)
     X1_test = df_data[model_column[0]].values
@@ -192,7 +192,7 @@ def __pred_class(df, df_data, modelclass_replacement, model_column, model, perce
     df_class_num = pd.DataFrame({'class': list(modelclass_replacement.keys()), 'num': list(modelclass_replacement.values())})
     df_test_predclass = pd.DataFrame(y_pred_test).rename(columns=df_class_num['class'])
 
-    create_pred_class_partial = partial(___create_pred_class, percent=percent)
+    create_pred_class_partial = partial(___create_pred_class, threshold=threshold)
 
     df_test_predclass['predict_1class'] = y_pred_test_max_
     df_test_predclass['predict_candidateclass'] = df_test_predclass.drop('predict_1class', axis=1).apply(create_pred_class_partial, axis=1)
@@ -211,32 +211,30 @@ def predclass(
     ms2spc_name = 'ms2spectrum', 
     prec_name = 'precursormz',
     ionmode = 'negative', 
-    percent=1, 
+    threshold=1, 
     exppath = None,
 ):
     
     """\
-    This function is to predict lipid class from LC-MS MS2spectrum.
-    ms2spectrum and precursormz must be the same length and from same order.
-
+    This function is to predict lipid class from LC-MS MS2spectrum and precursor ion value.
+    This version is supporting total 97 lipid sub classes.
+    
     Parameters
     ----------
     path
-        path which contains MS/MS spectrum and precursor ion data.
+        A path which contains MS/MS spectrum and precursor ion data.
     format
-        if you use 'MSDIAL' format, set 'MSDIAL'. Default is None.
+        if you use 'MSDIAL' export format, set 'MSDIAL'. Default is None.
     ms2spc_name
-        column name of MS/MS spectrum.
+        column name of MS/MS spectrum value.
     precursormz
-        column name of precursor ion.
+        column name of precursor ion value.
     ionmode
         Ion mode, either 'negative' / 'positive'. Default is 'negative'.
-    percent
-        Percentage of limiting value. Default is 1%.
-    expath
+    threshold
+        A value of Minimum probability to be considered as a prediction class. Default is 1%.
+    exppath
         Path to save the predicted result. Default is None. 
-        
-    *This version is supporting total 97 lipid sub classes.
     """
 
     if 'temp_dir' in locals():
@@ -247,7 +245,7 @@ def predclass(
 
     model, model_column, modelclass_replacement = __load_models(temp_dir, ionmode=ionmode) 
     df, df_data = __make_table(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
-    df_test_predclass = __pred_class(df, df_data, modelclass_replacement, model_column, model, percent=percent)
+    df_test_predclass = __pred_class(df, df_data, modelclass_replacement, model_column, model, threshold=threshold)
 
     if exppath == None:
         return df_test_predclass
@@ -313,30 +311,27 @@ def __candidate_search(df_test_predclass, path, format = None, class_name = 'ont
 def prediction_summary(
     df_test_predclass :pd.DataFrame, 
     path, format = None, class_name = 'ontology',
-    df = None,
+    showdf = False,
     exppath = None,
 ):
     
     """\
-    This function evaluates the predicted result and can also return the result as a Pandas dataframe.
-    If you have the correct answer, you can evaluate the accuracy of the prediction using this function.
-
-    By default, the result is printed. However, if you want to return the result as a dataframe, 
-    you can set the df parameter to something other than None.
+    By default, the summary result is printed. If you want to return the result as a dataframe, 
+    you can set the df parameter to True.
 
     Parameters
     ----------
     df_test_predclass
         Predicted result represented as a Pandas DataFrame.
-        This is also the output of the from_data_pred_class function.
+        This is the output of the predclass function.
     path
-        Path to the correct answer data which contains the correct class.
+        A path which contains the correct class data.
     format
         if you use 'MSDIAL' format, set 'MSDIAL'. Default is None.
     class_name
         Correct class column name. Default is 'ontology'.
-    df
-        Dataframe to return. Default is None. 
+    showdf
+        Show a dataframe which predicted result of each sample. Default is False. 
     exppath
         Path to save the dataframe. Default is None.
     """
@@ -355,7 +350,7 @@ def prediction_summary(
     print(f'pred candidate correct ratio: {pred_cand_eval/len(df_test_predclass_eval)}')
     print(f'mispred ratio: {mispred/len(df_test_predclass_eval)}')
 
-    if df == None: 
+    if showdf == False: 
         return #show summary
     
     else:
