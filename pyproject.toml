@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ms2lipid"
-version = "0.1.1"
+version = "0.1.3"
 description = "ms2lipid is a Python library for predicted lipid class by using ms2 spectrum."
 license = 'MIT'
 authors = ["NamiSakamoto <123930464+NamiSakamoto@users.noreply.github.com>"]
