@@ -1,7 +1,0 @@
-ms2lipid
-========
-
-.. toctree::
-   :maxdepth: 4
-
-   ms2lipid
