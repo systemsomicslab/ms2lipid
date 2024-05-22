@@ -1,1 +1,1 @@
-from .ms2slipid_func import *
+from .ms2lipid import *
