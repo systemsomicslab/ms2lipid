@@ -1,0 +1,10 @@
+ms2lipid package
+=======================
+
+Module
+------------------------
+
+.. automodule:: ms2lipid
+    :members:
+    :undoc-members:
+    :show-inheritance:
