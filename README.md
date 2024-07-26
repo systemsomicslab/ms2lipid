@@ -1,32 +1,19 @@
-# ms2lipid
+[![](https://img.shields.io/pypi/v/ms2lipid.svg?maxAge=3600)](https://pypi.org/project/ms2lipid/)
+[![DOI:10.1101/2024.05.16.594510](http://img.shields.io/badge/DOI-10.1101/2024.05.16.594510-B31B1B.svg)](https://doi.org/10.1101/2024.05.16.594510)
 
-ms2lipid is a Python library for predicted lipid class by using ms2 spectrum.
+# MS2Lipid
+
+MS2Lipid is a a lipid subclass prediction program using machine learning and curated tandem mass spectral data.
 
 ## Installation
-
-Use the package manager pip to install ms2lipid.
 
 ```bash
 pip install ms2lipid
 ```
 
-## Usage
-The page URL of package: https://pypi.org/project/ms2lipid/0.1.4/
+## Try MS2Lipid on Google Colab
 
-Show details： https://systemsomicslab.github.io/ms2lipid/
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/systemsomicslab/ms2lipid/blob/main/try_ms2lipid.ipynb)
 
-data_path can be used a path end with csv file, msp file, or text file.
-
-```python
-import ms2lipid
-
-# predicted lipid subclass by ms2 spectrum
-predicted_result_df = ms2lipid.predclass(data_path, ms2spectrum_column_name, precurcerion_column_name, ionmode)
-
-# Create a summary based on the information of correct class
-ms2lipid.prediction_summary(predicted_result_df, data_path, class_correct_column_name)
-```
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+## Documentation
+https://systemsomicslab.github.io/ms2lipid/
