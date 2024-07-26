@@ -1,34 +1,30 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "ms2lipid"
 version = "0.1.4"
+authors = [
+  { name="Nami Sakamoto", email="s248856t@st.go.tuat.ac.jp" },
+  { name="Takaki Oka", email="s237226y@st.go.tuat.ac.jp" },
+  { name="Kozo Nishida", email="kozo.nishida@gmail.com" },
+]
 description = "ms2lipid is a Python library for predicted lipid class by using ms2 spectrum."
-license = 'MIT'
-authors = ["NamiSakamoto <123930464+NamiSakamoto@users.noreply.github.com>"]
 readme = "README.md"
-homepage = "https://github.com/systemsomicslab/ms2lipid"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "pandas==2.0.3",
+  "tensorflow",
+  "keras",
+  "zenodo-get",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9, <3.12"
-numpy = "^1.26.4"
-pandas = "^2.1.2"
-tensorflow = "==2.15.0"
-keras = "==2.15.0"
-zenodo-get = "^1.6.1"
-
-[tool.poetry.group.test.dependencies]
-pytest = "^8.2.1"
-pytest-cov = "^5.0.0"
-
-[tool.poetry.group.docs.dependencies]
-sphinx = "^7.3.7"
-
-[tool.poetry.group.dev.dependencies]
-flake8 = "^7.0.0"
-black = "^24.4.2"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.urls]
+[project.urls]
+Homepage = "https://github.com/systemsomicslab/ms2lipid"
 Issues = "https://github.com/systemsomicslab/ms2lipid/issues"
