@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from ms2lipid.ms2lipid import *
+#from ms2lipid.ms2lipid import *
 
 path_test_csv_neg = 'tests/test_data_csv_neg.csv'
 path_test_csv_pos = 'tests/test_data_csv_pos.csv'
@@ -8,6 +8,10 @@ path_test_msdial_txt_neg = 'tests/test_data_msdial_txt_neg.txt'
 path_test_msp_pos = 'tests/test_data_msp_pos.msp'
 path_test_txt_neg = 'tests/test_data_txt_neg.txt'
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../ms2lipid')))
+from ms2lipid import *
 
 #pred class
 def test_predclass_calla():
