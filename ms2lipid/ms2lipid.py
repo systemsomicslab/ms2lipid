@@ -7,6 +7,7 @@ import pickle
 import subprocess
 from functools import partial
 import tempfile
+import joblib
 
 def __make_temp_dir():
     try:
@@ -50,7 +51,7 @@ def __wide_spectrum(df):
             else:
                 xy_data[int(round(float(mz)))] = float(intensity)   
         df_wide_spct.loc[i , xy_data.keys()] = pd.Series(xy_data)/max(xy_data.values())
-    df_wide_spct = df_wide_spct.fillna(0) 
+    df_wide_spct = df_wide_spct.fillna(0).infer_objects()
 
     return df_wide_spct
 
@@ -75,7 +76,7 @@ def __wide_neulloss(df):
             else:
                 xy_data[int(round(float(neutralloss)))] = float(intensity)   
         df_wide_neuloss.loc[i , xy_data.keys()] = pd.Series(xy_data)/max(xy_data.values()) 
-    df_wide_neuloss = df_wide_neuloss.fillna(0)
+    df_wide_neuloss = df_wide_neuloss.fillna(0).infer_objects()
 
     return df_wide_neuloss
 
@@ -84,7 +85,7 @@ def __spectrum_neutralloss_table(df):
     df_wide_spct = __wide_spectrum(df)
     df_wide_neuloss = __wide_neulloss(df)
 
-    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['precursormz', 'EOvalue', 'MCHvalue']]], axis=1).drop(columns=['precursormz'])
+    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['precursormz', 'MCHvalue']]], axis=1).drop(columns=['precursormz'])
     
     return df_data  
 
@@ -129,17 +130,15 @@ def __import_data(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 
 
     return df
 
-def __make_table(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'): #(ms2spectrum, precursormz)
+def __make_table(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'):
     df = __import_data(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
-    #pd.DataFrame({'ms2spectrum': ms2spectrum, 'precursormz': precursormz})
-    df.loc[:, 'EOvalue'] = df['precursormz'].round().astype(int) % 2
     df.loc[:, 'MCHvalue'] = __cal_mod(df['precursormz'])
     df_data = __spectrum_neutralloss_table(df)  
 
     return df, df_data
 
 def __import_zenodo_data():
-    filename = "10.5281/zenodo.11218838"
+    filename = "10.5281/zenodo.13893001"
     subprocess.run(["python", "-m", "zenodo_get", filename])
 
 def __unzip_file(temp_dir):
@@ -156,15 +155,17 @@ def __import_and_unzip_zenodo_data(temp_dir):
 def __load_models(temp_dir, ionmode = 'negative'): ###
     #select ion mode: negative or positive
     if ionmode == 'negative':
-        model = load_model(f'{temp_dir}/model_data/negative/model')
+        model = joblib.load(f'{temp_dir}/model_data/negative/model.joblib')
         model_column = pickle.load(open(f'{temp_dir}/model_data/negative/column.pkl', 'rb'))
-        modelclass_replacement = pickle.load(open(f'{temp_dir}/model_data/negative/dict.pkl', 'rb'))
+        label_encoder_neg = pickle.load(open(f'{temp_dir}/model_data/negative/dict.pkl', 'rb'))
+        modelclass_replacement = {index: label for index, label in enumerate(label_encoder_neg)}
         print('ion mode: negative')
 
     elif ionmode == 'positive':   
-        model = load_model(f'{temp_dir}/model_data/positive/model')
+        model = joblib.load(f'{temp_dir}/model_data/positive/model.joblib')
         model_column = pickle.load(open(f'{temp_dir}/model_data/positive/column.pkl', 'rb'))
-        modelclass_replacement = pickle.load(open(f'{temp_dir}/model_data/positive/dict.pkl', 'rb'))
+        label_encoder_pos = pickle.load(open(f'{temp_dir}/model_data/positive/dict.pkl', 'rb'))
+        modelclass_replacement = {index: label for index, label in enumerate(label_encoder_pos)}
         print('ion mode: positive')
 
     else:
@@ -183,13 +184,12 @@ def __pred_class(df, df_data, modelclass_replacement, model_column, model, thres
     
     df_data.columns = df_data.columns.astype(str)
     X1_test = df_data[model_column[0]].values
-    y_pred_test = model.predict(X1_test)
+    y_pred_test = model.predict_proba(X1_test)
     y_pred_test_max = np.argmax(y_pred_test, axis=1)
-    
-    replacement_reversed = {value: key for key, value in modelclass_replacement.items()}
-    y_pred_test_max_ = np.vectorize(__apply_replacement)(y_pred_test_max, replacement_reversed)
 
-    df_class_num = pd.DataFrame({'class': list(modelclass_replacement.keys()), 'num': list(modelclass_replacement.values())})
+    y_pred_test_max_ = np.vectorize(__apply_replacement)(y_pred_test_max, modelclass_replacement)
+
+    df_class_num = pd.DataFrame({'class': list(modelclass_replacement.values()), 'num': list(modelclass_replacement.keys())})
     df_test_predclass = pd.DataFrame(y_pred_test).rename(columns=df_class_num['class'])
 
     create_pred_class_partial = partial(___create_pred_class, threshold=threshold)
