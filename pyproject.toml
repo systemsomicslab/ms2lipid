@@ -10,7 +10,7 @@ authors = [
 ]
 description = "ms2lipid is a Python library for predicted lipid class by using ms2 spectrum."
 readme = "README.md"
-requires-python = ">=3.9, <3.12"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
