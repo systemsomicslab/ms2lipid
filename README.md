@@ -5,6 +5,8 @@
 MS2Lipid is a a lipid subclass prediction program using machine learning and curated tandem mass spectral data.
 
 ## Installation
+`ms2lipid` PyPI package is available for Python **3.9 to 3.12**.
+
 ```bash
 pip install ms2lipid
 ```
@@ -14,3 +16,18 @@ pip install ms2lipid
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Building `ms2lipid` Python package
+Make sure you have the latest version of PyPA’s build installed:
+```
+python -m pip install --upgrade build
+# or
+# python3 -m pip install --upgrade build
+```
+
+Now run this command from the same directory where pyproject.toml is located:
+```
+python -m build
+# or
+# python3 -m build
+```
