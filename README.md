@@ -18,14 +18,14 @@ pip install ms2lipid
 [MIT](https://choosealicense.com/licenses/mit/)
 
 ## Building `ms2lipid` Python package
-Make sure you have the latest version of PyPA’s build installed:
+Make sure you have the latest version of [PyPA’s build](https://pypi.org/project/build/) installed:
 ```
 python -m pip install --upgrade build
 # or
 # python3 -m pip install --upgrade build
 ```
 
-Now run this command from the same directory where pyproject.toml is located:
+Now run this command from the same directory where `pyproject.toml` is located:
 ```
 python -m build
 # or
