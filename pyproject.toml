@@ -30,6 +30,7 @@ dependencies = [
   "pandas",
   "tensorflow",
   "keras",
+  "xgboost",
   "joblib",
   "zenodo-get"
 ]
