@@ -1,6 +1,5 @@
 import pandas as pd
 import pytest
-#from ms2lipid.ms2lipid import *
 
 path_test_csv_neg = 'tests/test_data_csv_neg.csv'
 path_test_csv_pos = 'tests/test_data_csv_pos.csv'
