@@ -36,7 +36,7 @@ def __wide_spectrum(df):
     df_wide_spct = pd.DataFrame(columns=range(1, 1251), index=None)
 
     for i, row in df.iterrows():
-        data = row['ms2spectrum']     
+        data = row['MS/MS spectrum']     
         split_data = data.split(" ")
         data_list = [i.split(":") for i in split_data]  
         xy_data = {}
@@ -59,10 +59,10 @@ def __wide_neulloss(df):
     df_wide_neuloss = pd.DataFrame(columns=range(0, -1251, -1), index=None)
 
     for i, row in df.iterrows():
-        data = row['ms2spectrum']
+        data = row['MS/MS spectrum']
         split_data = data.split(" ")
         data_list = [i.split(":") for i in split_data]
-        precursor = row['precursormz']      
+        precursor = row['Average Mz']      
         xy_data = {}
         for item in data_list:           
             if len(item) != 2:
@@ -85,7 +85,7 @@ def __spectrum_neutralloss_table(df):
     df_wide_spct = __wide_spectrum(df)
     df_wide_neuloss = __wide_neulloss(df)
 
-    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['precursormz', 'MCHvalue']]], axis=1).drop(columns=['precursormz'])
+    df_data = pd.concat([df_wide_spct, df_wide_neuloss, df[['Average Mz', 'MCHvalue']]], axis=1).drop(columns=['Average Mz'])
     
     return df_data  
 
@@ -100,39 +100,39 @@ def __msp2df(file_path):
     msp_data_ = msp_data.pivot_table(index='id', columns='name', values='value', aggfunc=' '.join).reset_index()
     msp_data_.columns = msp_data_.columns.str.lower()
     makedf = msp_data_[['id','name','ontology','precursormz','msmsspectrum']].\
-        rename(columns={'name':'Metabolitename','ontology':'Ontology','precursormz':'AverageMz', 'msmsspectrum':'MSMSspectrum'})
+        rename(columns={'id':'Alignment ID', 'name':'Metabolitename','ontology':'Ontology','precursormz':'Average Mz', 'msmsspectrum':'MS/MS spectrum'})
     
     return makedf
 
-def __import_data(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'):
+def __import_data(path, format = None, ms2spc_name = 'MS/MS spectrum', prec_name = 'Average Mz', ID = 'Alignment ID'):
 
     data_type = path.split('.')[-1]
 
     if data_type == 'csv':
         df = pd.read_csv(path)
-        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+        df = df[[ms2spc_name,prec_name,ID]].rename(columns={ms2spc_name:'MS/MS spectrum',prec_name:'Average Mz', ID:'Alignment ID'})
 
     elif data_type == 'msp':
         df = __msp2df(path)
-        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
-        df['precursormz'] = df['precursormz'].str.replace(' ', '').astype(float)
+        df = df[[ms2spc_name,prec_name,ID]].rename(columns={ms2spc_name:'MS/MS spectrum',prec_name:'Average Mz', ID:'Alignment ID'})
+        df['Average Mz'] = df['Average Mz'].astype(float)
         
     elif data_type == 'txt' and format == None:
         df = pd.read_csv(path, sep='\t', delimiter=None)
-        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+        df = df[[ms2spc_name,prec_name,ID]].rename(columns={ms2spc_name:'MS/MS spectrum',prec_name:'Average Mz', ID:'Alignment ID'})
 
     elif data_type == 'txt' and format =='MSDIAL':
         df = pd.read_csv(path, sep='\t', header=4, delimiter=None)
-        df = df[[ms2spc_name,prec_name]].rename(columns={ms2spc_name:'ms2spectrum',prec_name:'precursormz'})
+        df = df[[ms2spc_name,prec_name,ID]].rename(columns={ms2spc_name:'MS/MS spectrum',prec_name:'Average Mz', ID:'Alignment ID'})
 
     else:
         print('Data type not supported')
 
     return df
 
-def __make_table(path, format = None, ms2spc_name = 'ms2spectrum', prec_name = 'precursormz'):
-    df = __import_data(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
-    df.loc[:, 'MCHvalue'] = __cal_mod(df['precursormz'])
+def __make_table(path, format = None, ms2spc_name = 'MS/MS spectrum', prec_name = 'Average Mz', ID = 'Alignment ID'):
+    df = __import_data(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name, ID=ID)
+    df.loc[:, 'MCHvalue'] = __cal_mod(df['Average Mz'])
     df_data = __spectrum_neutralloss_table(df)  
 
     return df, df_data
@@ -197,8 +197,9 @@ def __pred_class(df, df_data, modelclass_replacement, model_column, model, thres
     df_test_predclass['predict_1class'] = y_pred_test_max_
     df_test_predclass['predict_candidateclass'] = df_test_predclass.drop('predict_1class', axis=1).apply(create_pred_class_partial, axis=1)
 
-    df_pred_result = df[['ms2spectrum', 'precursormz']].reset_index(drop=True).\
+    df_pred_result = df[['MS/MS spectrum', 'Average Mz']].reset_index(drop=True).\
         merge(df_test_predclass[['predict_1class', 'predict_candidateclass']], left_index=True, right_index=True)
+    df_pred_result.insert(0, 'ID', df['Alignment ID'])
 
     return df_pred_result
 
@@ -208,15 +209,16 @@ def __save_pred_result(df_test_predclass, exppath = 'pred_result.csv'):
 def predclass(
     path,
     format = None, 
-    ms2spc_name = 'ms2spectrum', 
-    prec_name = 'precursormz',
+    ms2spc_name = 'MS/MS spectrum', 
+    prec_name = 'Average Mz',
+    ID = 'Alignment ID',
     ionmode = 'negative', 
     threshold=1, 
     exppath = None,
 ):
     
     """\
-    This function is to predict lipid class from LC-MS MS2spectrum and precursor ion value.
+    This function is to predict lipid class from LC-MS MS/MS spectrum and precursor ion value.
     This version is supporting total 97 lipid sub classes.
     
     Parameters
@@ -227,8 +229,10 @@ def predclass(
         if you use 'MSDIAL' export format, set 'MSDIAL'. Default is None.
     ms2spc_name
         column name of MS/MS spectrum value.
-    precursormz
+    prec_name
         column name of precursor ion value.
+    ID
+        column name of sample ID.
     ionmode
         Ion mode, either 'negative' / 'positive'. Default is 'negative'.
     threshold
@@ -244,7 +248,7 @@ def predclass(
         __import_and_unzip_zenodo_data(temp_dir)
 
     model, model_column, modelclass_replacement = __load_models(temp_dir, ionmode=ionmode) 
-    df, df_data = __make_table(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name)
+    df, df_data = __make_table(path, format = format, ms2spc_name = ms2spc_name, prec_name = prec_name, ID=ID)
     df_test_predclass = __pred_class(df, df_data, modelclass_replacement, model_column, model, threshold=threshold)
 
     if exppath == None:
@@ -253,7 +257,6 @@ def predclass(
         __save_pred_result(df_test_predclass, exppath = exppath)
 
 
-#答えがあるときの正答率の評価
 def __correctclass_data(path, format = None, class_name = 'ontology'):
 
     data_type = path.split('.')[-1]
