@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "ms2lipid"
-version = "0.1.6"
+version = "0.1.8"
 authors = [
   { name="Nami Sakamoto", email="123930464+NamiSakamoto@users.noreply.github.com" },
 ]
