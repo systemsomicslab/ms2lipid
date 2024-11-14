@@ -2,7 +2,7 @@
 [![DOI:10.1101/2024.05.16.594510](http://img.shields.io/badge/DOI-10.1101/2024.05.16.594510-B31B1B.svg)](https://doi.org/10.1101/2024.05.16.594510)
 
 # ms2lipid
-MS2Lipid is a a lipid subclass prediction program using machine learning and curated tandem mass spectral data.
+MS2Lipid is a lipid subclass prediction program using machine learning and curated tandem mass spectral data.
 
 ## Installation
 `ms2lipid` PyPI package is available for Python **3.9 to 3.12**.
